@@ -332,17 +332,11 @@ namespace erp
 				}
 
 				plyFileNames.push_back(tokens[0]);
-				//check
-				std::ifstream ifs(tokens[0], std::ifstream::in);
-				if (!ifs.is_open()) {
-					std::cout << "Can not open \"ply file:" << tokens[0] << "\"!" << std::endl;
-					exit(1);
-				}
 				pointCloudCounter++;
 			}
 
 			if (isAscii) {
-				assert(viewAttributeCount == 7);
+				assert(viewAttributeCount == 14);
 				size_t viewCounter = 0;
 				while (!ifs.eof() && viewCounter < viewNumber) {
 					ifs.getline(tmp, MAX_BUFFER_SIZE);
@@ -353,9 +347,26 @@ namespace erp
 					if (tokens.size() < viewAttributeCount) {
 						return false;
 					}
+
 					viewNames.push_back(tokens[0].c_str());
 					T.push_back(pcc::PCCVector3D(atof(tokens[1].c_str()), atof(tokens[2].c_str()), atof(tokens[3].c_str())));
 					R.push_back(pcc::PCCVector3D(atof(tokens[4].c_str()), atof(tokens[5].c_str()), atof(tokens[6].c_str())));
+
+					widths.push_back(atoi(tokens[7].c_str()));
+					heights.push_back(atoi(tokens[8].c_str()));
+					if (tokens[9] == "420")
+					{
+						textureYUVFormats.push_back(YUV420);
+						depthYUVFormats.push_back(YUV420);
+					}
+					else
+					{
+						std::cout << "Unknown YUV format!" << std::endl;
+					}
+					depthbitDepths.push_back(atoi(tokens[10].c_str()));
+					texturebitDepths.push_back(atoi(tokens[11].c_str()));
+					Rnears.push_back(atof(tokens[12].c_str()));
+					Rfars.push_back(atof(tokens[13].c_str()));
 					viewCounter++;
 				}
 			}

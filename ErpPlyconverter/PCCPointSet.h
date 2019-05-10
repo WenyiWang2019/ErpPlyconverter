@@ -573,12 +573,20 @@ namespace pcc {
 		  }
 		  return getPointCount();
 	  }
-	  void ChangeCoordinates(PCCVector3<double> R, PCCVector3<double> T)//变换坐标
+	  void ToCameraCoordinates(PCCVector3<double> R, PCCVector3<double> T)//世界坐标->相机坐标
 	  {
 		  const size_t pointCount = getPointCount();
 		  for (int i = 0; i < pointCount; i++)
 		  {
-			  points[i].getPosition() = points[i].getPosition()+T;
+			  points[i].getPosition() = points[i].getPosition()-T;
+		  }
+	  }
+	  void ToWorldCoordinates(PCCVector3<double> R, PCCVector3<double> T)//相机坐标->世界坐标
+	  {
+		  const size_t pointCount = getPointCount();
+		  for (int i = 0; i < pointCount; i++)
+		  {
+			  points[i].getPosition() = points[i].getPosition() + T;
 		  }
 	  }
 	  
@@ -606,30 +614,49 @@ namespace pcc {
 			  phi = -sign(position.y())*acos(position.x() / sqrt(position.x() * position.x() + position.y() * position.y()));
 			  theta = asin(position.z() / R);
 
-			  if (W == H)
-			  {
-				  n = floor((phi / PI + 0.5)*W - 0.5 + 0.5);
-				  n = n >= W ? 0 : n;
-				  n = n < 0 ? W - 1 : n;
-				  m = floor((0.5 - theta / PI)*H - 0.5 + 0.5);
-				  m = m >= H ? 0 : m;
-				  m = m < 0 ? H - 1 : m;
-			  }
-			  else
-			  {
-				  n = floor((phi / (2 * PI) + 0.5)*W - 0.5 + 0.5);
-				  n = n >= W ? 0 : n;
-				  n = n < 0 ? W - 1 : n;
-				  m = floor((0.5 - theta / PI)*H - 0.5 + 0.5);
-				  m = m >= H ? 0 : m;
-				  m = m < 0 ? H - 1 : m;
-			  }
-		
+			  n = floor((phi / (2 * PI) + 0.5)*W - 0.5 + 0.5);
+			  n = n >= W ? 0 : n;
+			  n = n < 0 ? W - 1 : n;
+			  m = floor((0.5 - theta / PI)*H - 0.5 + 0.5);
+			  m = m >= H ? 0 : m;
+			  m = m < 0 ? H - 1 : m;
+
 			  z= floor(vmax * (1 / R - 1 / Rfar) / (1 / Rnear - 1 / Rfar) + 0.5);
 			  position = PCCPoint3D(n, m, z);
 		  }
 	  }
- 	  
+	  void ToDescartesCoordinates(uint8_t xBitDepth, uint8_t yBitDepth, uint8_t zBitDepth, double Rnear, double Rfar)
+	  {
+		  uint16_t W = 1 << xBitDepth;
+		  uint16_t H = 1 << yBitDepth;
+		  long vmax = (1 << zBitDepth) - 1;
+
+		  double phi;
+		  double theta;
+		  double R;
+
+		  PCCPoint3D point3D;
+		  PCCColor3B Color3B;
+		  size_t piontCount = getPointCount();
+
+		  const size_t pointCount = getPointCount();
+		  for (int i = 0; i < pointCount; i++)
+		  {
+			  PCCPoint3D &position = getPosition(i);
+
+			  uint16_t n = position[0], m = position[1], Depth = position[2];
+			
+			  phi = ((n + 0.5) / W - 0.5) * 2 * PI;
+			  theta = (0.5 - (m + 0.5) / H)*PI;
+
+			  R = vmax * Rnear*Rfar / (Depth*(Rfar - Rnear) + vmax * Rnear);
+
+			  position[0] = R * cos(theta)*cos(phi);
+			  position[1] = -R * cos(theta)*sin(phi);
+			  position[2] = R * sin(theta);
+		  }
+	  }
+
 	  void sort()
 	  {
 		  std::sort(points.begin(), points.end());
@@ -665,6 +692,30 @@ namespace pcc {
 		  i++;
 
 		  resize(i);
+	  }
+
+	  void Voxelize(uint8_t PointCloudGeometryBitDepth) //点云体素化
+	  {
+
+		  assert(PointCloudGeometryBitDepth <= 16 );
+		  PCCBox3D box3D = computeBoundingBox();
+		  double xSize = box3D.max.x() - box3D.min.x();
+		  double ySize = box3D.max.y() - box3D.min.y();
+		  double zSize = box3D.max.z() - box3D.min.z();
+		  double maxSize = (xSize > ySize ? xSize : ySize) > zSize ? (xSize > ySize ? xSize : ySize) : zSize;
+		  double stepSize = maxSize / pow(2, PointCloudGeometryBitDepth);
+
+		  const size_t pointCount = getPointCount();
+		  for (int i = 0; i < pointCount; i++)
+		  {
+			  const PCCPoint3D& position = points[i].getPosition();
+			  PCCPoint3D positionTemp;
+			  positionTemp[0] = std::floor((position[0] - box3D.min.x()) / stepSize);
+			  positionTemp[1] = std::floor((position[1] - box3D.min.y()) / stepSize);
+			  positionTemp[2] = std::floor((position[2] - box3D.min.z()) / stepSize);
+			  setPosition(i, positionTemp);
+		  }
+		  //在这里可以打印box3D和stepSize
 	  }
 
 	 private:
