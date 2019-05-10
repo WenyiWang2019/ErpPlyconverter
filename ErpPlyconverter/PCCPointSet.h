@@ -644,7 +644,7 @@ namespace pcc {
 
 				double R = sqrt(position.x() * position.x() + position.y() * position.y() + position.z() * position.z());
 
-				phi = -sign(position.y())*acos(position.x() / sqrt(position.x() * position.x() + position.y() * position.y()));
+				phi = sign(position.y())*acos(position.x() / sqrt(position.x() * position.x() + position.y() * position.y()));
 				theta = asin(position.z() / R);
 
 				n = floor((phi / (2 * PI) + 0.5)*W - 0.5 + 0.5);
@@ -684,8 +684,8 @@ namespace pcc {
 
 				R = vmax * Rnear*Rfar / (Depth*(Rfar - Rnear) + vmax * Rnear);
 
-				position[0] = R * cos(theta)*cos(phi);
-				position[1] = -R * cos(theta)*sin(phi);
+				position[0] = R * cos(theta)*cos(-phi);
+				position[1] = -R * cos(theta)*sin(-phi);
 				position[2] = R * sin(theta);
 			}
 		}
