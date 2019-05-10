@@ -14,7 +14,7 @@
 #include "PCCMath.h"
 #include "PCCMisc.h"
 
-namespace erp 
+namespace erp
 {
 #define PI (3.1415926)
 #define EPS (1e-15)
@@ -67,7 +67,7 @@ namespace erp
 		size_t viewNumber;//视点数量，由ERP配置文件解析得到（解析参数）
 		std::vector<std::string> depthFileNames; //各个视点深度文件名，由ERP配置文件解析得到（解析参数）
 		std::vector<std::string> textureFileNames; //各个视点纹理文件名，由ERP配置文件解析得到（解析参数）
-		
+
 
 
 		//点云转ERP参数 mode=1
@@ -293,7 +293,7 @@ namespace erp
 					}
 					else if (tokens[1] == "pointCloud")
 					{
-						frameNumber= atoi(tokens[2].c_str());
+						frameNumber = atoi(tokens[2].c_str());
 						isViewProperty = false;
 						isPointCloudProperty = true;
 					}
@@ -318,7 +318,7 @@ namespace erp
 				std::cout << "Error: non-supported version!" << std::endl;
 				return false;
 			}
-			
+
 			assert(PointCloudAttributeCount == 1);
 			size_t pointCloudCounter = 0;
 			while (!ifs.eof() && pointCloudCounter < frameNumber) {
@@ -332,17 +332,11 @@ namespace erp
 				}
 
 				plyFileNames.push_back(tokens[0]);
-				//check
-				std::ifstream ifs(tokens[0], std::ifstream::in);
-				if (!ifs.is_open()) {
-					std::cout << "Can not open \"ply file:" << tokens[0] << "\"!" << std::endl;
-					exit(1);
-				}
 				pointCloudCounter++;
 			}
 
 			if (isAscii) {
-				assert(viewAttributeCount == 7);
+				assert(viewAttributeCount == 14);
 				size_t viewCounter = 0;
 				while (!ifs.eof() && viewCounter < viewNumber) {
 					ifs.getline(tmp, MAX_BUFFER_SIZE);
@@ -353,9 +347,26 @@ namespace erp
 					if (tokens.size() < viewAttributeCount) {
 						return false;
 					}
+
 					viewNames.push_back(tokens[0].c_str());
 					T.push_back(pcc::PCCVector3D(atof(tokens[1].c_str()), atof(tokens[2].c_str()), atof(tokens[3].c_str())));
 					R.push_back(pcc::PCCVector3D(atof(tokens[4].c_str()), atof(tokens[5].c_str()), atof(tokens[6].c_str())));
+
+					widths.push_back(atoi(tokens[7].c_str()));
+					heights.push_back(atoi(tokens[8].c_str()));
+					if (tokens[9] == "420")
+					{
+						textureYUVFormats.push_back(YUV420);
+						depthYUVFormats.push_back(YUV420);
+					}
+					else
+					{
+						std::cout << "Unknown YUV format!" << std::endl;
+					}
+					depthbitDepths.push_back(atoi(tokens[10].c_str()));
+					texturebitDepths.push_back(atoi(tokens[11].c_str()));
+					Rnears.push_back(atof(tokens[12].c_str()));
+					Rfars.push_back(atof(tokens[13].c_str()));
 					viewCounter++;
 				}
 			}
@@ -397,7 +408,7 @@ namespace erp
 					//printf("\t\t\t%s %s\n", depthFileNames[i].c_str(), textureFileNames[i].c_str());
 				}
 				printf("\toutputPlyPath:\t\t\t%s\n", outputPlyPath.c_str());
-				
+
 			}
 			else if (mode == 1)
 			{
@@ -414,16 +425,16 @@ namespace erp
 				{
 					printf("\t\t\t%s\n", viewNames[i].c_str());
 				}
-				
+
 				printf("\toutputRecYUVPath\t\t%s\n", outputRecYUVPath.c_str());
-				
+
 			}
 
 			printf("\n\n");
 		}
 		void PrintHelp()
 		{
-			std::cout<< "--帮助" << std::endl;
+			std::cout << "--帮助" << std::endl;
 			std::cout << "公共参数:" << std::endl;
 			std::cout << std::setw(25) << std::setiosflags(std::ios::left) << "-mode" << "模式" << std::endl;
 			std::cout << std::setw(25) << std::setiosflags(std::ios::left) << "-frameNumber" << "帧数" << std::endl;
@@ -436,7 +447,7 @@ namespace erp
 			std::cout << std::setw(25) << std::setiosflags(std::ios::left) << "-outputRecYUVPath" << "重建YUV文件输出路径，不包含文件名" << std::endl;
 		}
 	};
-	
+
 
 	class YUV
 	{
@@ -464,10 +475,10 @@ namespace erp
 			W = 0; H = 0; bitDepth = 0;
 			Y = NULL; U = NULL; V = NULL;
 		}
-		YUV(uint16_t pW, uint16_t pH, uint8_t pbitDepth, YUVformat pcs):W(pW),H(pH),bitDepth(pbitDepth),cs(pcs)
+		YUV(uint16_t pW, uint16_t pH, uint8_t pbitDepth, YUVformat pcs) :W(pW), H(pH), bitDepth(pbitDepth), cs(pcs)
 		{
 			assert(bitDepth <= 16);
-			uint16_t emptyVal= 1 << (bitDepth - 1);
+			uint16_t emptyVal = 1 << (bitDepth - 1);
 			Y = new std::vector< std::vector <uint16_t> >(H, std::vector <uint16_t>(W, emptyVal));
 			U = new std::vector< std::vector <uint16_t> >(H, std::vector <uint16_t>(W, emptyVal));
 			V = new std::vector< std::vector <uint16_t> >(H, std::vector <uint16_t>(W, emptyVal));
@@ -500,14 +511,14 @@ namespace erp
 			H = H / div;
 			return true;
 		}
-		void YUVRead(std::string fileName,size_t frameCounter)
+		void YUVRead(std::string fileName, size_t frameCounter)
 		{
 			assert(Y&&U&&V);
 			if (cs == YUV420)
 			{
 				uint16_t *FileBuffer = (uint16_t*)malloc(H*W * sizeof(uint16_t) * 3 / 2);
-				long long offset = H*W * 3 * frameCounter;
-				
+				long long offset = H * W * 3 * frameCounter;
+
 				FILE *Fp = fopen(fileName.c_str(), "rb");
 				_fseeki64(Fp, offset, SEEK_SET);
 				if (fread(FileBuffer, W*H * 3, 1, Fp) != 1)
@@ -522,13 +533,13 @@ namespace erp
 					for (int i = 0; i < W; i++)
 					{
 						int address_y = j * W + i;
-						int address_u = H*W + (int)(j / 2)*(W / 2) + (int)(i / 2);
-						int address_v = H*W * 5 / 4 + (int)(j / 2)*(W / 2) + (int)(i / 2);
+						int address_u = H * W + (int)(j / 2)*(W / 2) + (int)(i / 2);
+						int address_v = H * W * 5 / 4 + (int)(j / 2)*(W / 2) + (int)(i / 2);
 
 						(*Y)[j][i] = FileBuffer[address_y];
 						(*U)[j][i] = FileBuffer[address_u];
 						(*V)[j][i] = FileBuffer[address_v];
-						
+
 					}
 				}
 				free(FileBuffer);
@@ -536,7 +547,7 @@ namespace erp
 			}
 			else
 			{
-				std::cout<<"Haven't relized reading such format YUV File!" << std::endl;
+				std::cout << "Haven't relized reading such format YUV File!" << std::endl;
 				exit(1);
 			}
 		}
@@ -545,7 +556,7 @@ namespace erp
 			assert(Y&&U&&V);
 			FILE *Fp = fopen(fileName.c_str(), "ab");
 
-			for (int i = 0; i <H; i++)
+			for (int i = 0; i < H; i++)
 			{
 				for (int j = 0; j < W; j++)
 				{
@@ -571,15 +582,15 @@ namespace erp
 			return;
 
 		}
-		bool YUV444To420(){return true;}
-		bool YUV420To444(){return true;}
-		void SetY(uint16_t m, uint16_t n, uint16_t val){assert(m < H&&n < W);(*Y)[m][n] = val;}
-		void SetU(uint16_t m, uint16_t n, uint16_t val){assert(m < H&&n < W);(*U)[m][n] = val;}
-		void SetV(uint16_t m, uint16_t n, uint16_t val){assert(m < H&&n < W);(*V)[m][n] = val;}
-		uint16_t GetY(uint16_t m, uint16_t n) {return (*Y)[m][n];}
-		uint16_t GetU(uint16_t m, uint16_t n) {return (*U)[m][n];}
-		uint16_t GetV(uint16_t m, uint16_t n) {return (*V)[m][n];}
-		
+		bool YUV444To420() { return true; }
+		bool YUV420To444() { return true; }
+		void SetY(uint16_t m, uint16_t n, uint16_t val) { assert(m < H&&n < W); (*Y)[m][n] = val; }
+		void SetU(uint16_t m, uint16_t n, uint16_t val) { assert(m < H&&n < W); (*U)[m][n] = val; }
+		void SetV(uint16_t m, uint16_t n, uint16_t val) { assert(m < H&&n < W); (*V)[m][n] = val; }
+		uint16_t GetY(uint16_t m, uint16_t n) { return (*Y)[m][n]; }
+		uint16_t GetU(uint16_t m, uint16_t n) { return (*U)[m][n]; }
+		uint16_t GetV(uint16_t m, uint16_t n) { return (*V)[m][n]; }
+
 	};
 
 	class CErpFrame
@@ -640,11 +651,11 @@ namespace erp
 			texture = new YUV(width, height, texturebitDepth, textureYUVFormat);
 			depth = new YUV(width, height, depthbitDepth, depthYUVFormat);
 			vmax = 1 << depthbitDepth - 1;
-	
+
 		}
 		CErpFrame(std::string pviewName, uint16_t pwidth, uint16_t pheight, double pRnear, double pRfar, YUVformat pdepthYUVFormat, uint8_t pdepthbitDepth,
-			YUVformat ptextureYUVFormat, uint8_t ptexturebitDepth, pcc::PCCVector3<double> pT, pcc::PCCVector3<double> pR,double pdeltaX,double pdeltaY,
-			double pfx,double pfy)
+			YUVformat ptextureYUVFormat, uint8_t ptexturebitDepth, pcc::PCCVector3<double> pT, pcc::PCCVector3<double> pR, double pdeltaX, double pdeltaY,
+			double pfx, double pfy)
 		{
 			viewName = pviewName;
 			width = pwidth;
@@ -775,7 +786,7 @@ namespace erp
 		uint16_t texturebitDepth;
 	};
 	typedef CErpFrame CPlaneFrame;
-	
+
 	int sign(double Z)
 	{
 		return (Z > 0 ? 1 : -1);
