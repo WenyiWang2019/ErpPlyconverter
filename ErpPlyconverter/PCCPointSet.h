@@ -631,12 +631,12 @@ namespace pcc {
 		void ToPolarCoordinates(uint8_t xBitDepth, uint8_t yBitDepth, uint8_t zBitDepth, double Rnear, double Rfar)
 		{
 			//W->X H->Y depth->Z
-			uint16_t W = 1 << xBitDepth;
-			uint16_t H = 1 << yBitDepth;
+			uint32_t W = 1 << xBitDepth;
+			uint32_t H = 1 << yBitDepth;
 			long vmax = (1 << zBitDepth) - 1;
 
 			double phi, theta;
-			uint16_t n, m, z;
+			uint32_t n, m, z;
 			const size_t pointCount = getPointCount();
 			for (int i = 0; i < pointCount; i++)
 			{
@@ -644,7 +644,7 @@ namespace pcc {
 
 				double R = sqrt(position.x() * position.x() + position.y() * position.y() + position.z() * position.z());
 
-				phi = sign(position.y())*acos(position.x() / sqrt(position.x() * position.x() + position.y() * position.y()));
+				phi = -sign(position.y())*acos(position.x() / sqrt(position.x() * position.x() + position.y() * position.y()));
 				theta = asin(position.z() / R);
 
 				n = floor((phi / (2 * PI) + 0.5)*W - 0.5 + 0.5);
@@ -660,8 +660,8 @@ namespace pcc {
 		}
 		void ToDescartesCoordinates(uint8_t xBitDepth, uint8_t yBitDepth, uint8_t zBitDepth, double Rnear, double Rfar)
 		{
-			uint16_t W = 1 << xBitDepth;
-			uint16_t H = 1 << yBitDepth;
+			uint32_t W = 1 << xBitDepth;
+			uint32_t H = 1 << yBitDepth;
 			long vmax = (1 << zBitDepth) - 1;
 
 			double phi;
@@ -677,15 +677,15 @@ namespace pcc {
 			{
 				PCCPoint3D &position = getPosition(i);
 
-				uint16_t n = position[0], m = position[1], Depth = position[2];
+				uint32_t n = position[0], m = position[1], Depth = position[2];
 
 				phi = ((n + 0.5) / W - 0.5) * 2 * PI;
 				theta = (0.5 - (m + 0.5) / H)*PI;
 
 				R = vmax * Rnear*Rfar / (Depth*(Rfar - Rnear) + vmax * Rnear);
 
-				position[0] = R * cos(theta)*cos(-phi);
-				position[1] = -R * cos(theta)*sin(-phi);
+				position[0] = R * cos(theta)*cos(phi);
+				position[1] = -R * cos(theta)*sin(phi);
 				position[2] = R * sin(theta);
 			}
 		}
