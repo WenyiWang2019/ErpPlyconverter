@@ -650,7 +650,7 @@ namespace erp
 			if (depth) delete depth;
 			texture = new YUV(width, height, texturebitDepth, textureYUVFormat);
 			depth = new YUV(width, height, depthbitDepth, depthYUVFormat);
-			vmax = 1 << depthbitDepth - 1;
+			vmax = (1 << depthbitDepth )- 1;
 	
 		}
 		CErpFrame(std::string pviewName, uint16_t pwidth, uint16_t pheight, double pRnear, double pRfar, YUVformat pdepthYUVFormat, uint8_t pdepthbitDepth,
