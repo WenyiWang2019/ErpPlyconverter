@@ -58,6 +58,7 @@ namespace pcc {
 	class PCCPoint
 	{
 	public:
+		size_t repeatNum;
 		PCCPoint() {}
 		~PCCPoint() = default;
 		PCCPoint3D getPosition() const
@@ -81,13 +82,14 @@ namespace pcc {
 		{
 			return color;
 		}
-	private:
+	//private:
 		PCCPoint3D position;
 		PCCColor3B color;
 	};
 
 	class PCCPointSet3 {
 	public:
+		std::vector<size_t> index;
 		PCCPointSet3() {}
 		PCCPointSet3(const PCCPointSet3 &) = default;
 		PCCPointSet3 &operator=(const PCCPointSet3 &rhs) = default;
@@ -694,12 +696,16 @@ namespace pcc {
 		{
 			std::sort(points.begin(), points.end());
 		}
+
 		void RemoveRepeatePoints()
 		{
+			index.push_back(0);
+
 			size_t i = 0, j = 0, k;
 			for (k = 1; k < points.size(); k++)
 			{
 				if (points[k].getPosition() == points[j].getPosition()) continue;
+				index.push_back(k);
 				PCCPoint3D tempPosition = points[j].getPosition();
 				PCCColor3B tempColor(0, 0, 0);
 				for (size_t m = j; m < k; m++)
@@ -709,6 +715,7 @@ namespace pcc {
 				tempColor /= (k - j);
 				points[i].getPosition() = tempPosition;
 				points[i].getColor() = tempColor;
+				points[i].repeatNum = (k - j-1);
 				i++;
 				j = k;
 			}
@@ -722,12 +729,14 @@ namespace pcc {
 			tempColor /= (k - j);
 			points[i].getPosition() = tempPosition;
 			points[i].getColor() = tempColor;
+			points[i].repeatNum = (k - j-1);
+
 			i++;
 
 			resize(i);
 		}
 
-	private:
+	//private:
 		std::vector<PCCPoint> points;
 	};
 }
